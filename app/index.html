@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Andre's Grill Sport Bar — Live Ordering</title>
+<script src="https://js.stripe.com/v3/"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1816; --bg-raised: #221f1c; --amber: #c17817; --amber-bright: #e0942c;
+    --bone: #ede6d6; --bone-dim: #b8ae9c; --line: #35312c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  h1, h2 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+  nav { background: rgba(26, 24, 22, 0.92); border-bottom: 1px solid var(--line); padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+  .logo span { color: var(--amber-bright); }
+  .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 40px; margin-top: 40px; }
+  .card { background: var(--bg-raised); border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
+  .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .btn { background: var(--amber); color: #1a1816; padding: 10px 18px; border: none; font-weight: 600; border-radius: 3px; cursor: pointer; }
+  .btn:hover { background: var(--amber-bright); }
+  input { width: 100%; background: var(--bg); border: 1px solid var(--line); padding: 10px; color: var(--bone); margin-bottom: 12px; border-radius: 3px; }
+  #payment-element { margin: 15px 0; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">Andre's <span>Grill</span> &amp; Sport Bar</div>
+  <div>Live Enterprise Ordering</div>
+</nav>
+
+<div class="wrap grid">
+  <div>
+    <h2>Menu</h2>
+    <div class="card">
+      <div class="menu-item">
+        <div><strong>Smoked Wings, dozen</strong><div style="font-size:0.85rem; color:var(--bone-dim)">Grilled with house rub.</div></div>
+        <div><span>$15.00</span> <button class="btn" onclick="addToCart('Smoked Wings', 15)">Add</button></div>
+      </div>
+      <div class="menu-item">
+        <div><strong>The Andre Burger</strong><div style="font-size:0.85rem; color:var(--bone-dim)">Double smash patty &amp; cheddar.</div></div>
+        <div><span>$16.00</span> <button class="btn" onclick="addToCart('The Andre Burger', 16)">Add</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h2>Your Tab</h2>
+    <div class="card">
+      <div id="cart-items" style="margin-bottom: 15px;">Cart is empty.</div>
+      <div style="font-weight: bold; margin-bottom: 15px;">Total: $<span id="cart-total">0.00</span></div>
+      <input type="text" id="cust-name" placeholder="Your Name" required>
+      <input type="tel" id="cust-phone" placeholder="Phone Number" required>
+      <form id="payment-form" style="display:none;">
+        <div id="payment-element"></div>
+        <button class="btn" style="width:100%; margin-top:10px;">Pay &amp; Submit Order</button>
+      </form>
+      <button id="checkout-btn" class="btn" style="width:100%;" onclick="startCheckout()">Proceed to Payment</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let cart = [];
+  let stripe = Stripe('pk_test_livekey_placeholder');
+  let elements;
+
+  function addToCart(name, price) {
+    cart.push({ name, price });
+    document.getElementById('cart-items').innerHTML = cart.map(i => `<div>${i.name} - $${i.price}</div>`).join('');
+    document.getElementById('cart-total').textContent = cart.reduce((s, i) => s + i.price, 0).toFixed(2);
+  }
+
+  async function startCheckout() {
+    const name = document.getElementById('cust-name').value;
+    const phone = document.getElementById('cust-phone').value;
+    const total = cart.reduce((s, i) => s + i.price, 0);
+    if (!name || !phone || cart.length === 0) { alert('Complete name, phone, and cart.'); return; }
+
+    const res = await fetch('/api/create-order-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_name: name, phone, items: cart, amount: total })
+    });
+    const data = await res.json();
+
+    elements = stripe.elements({ clientSecret: data.clientSecret });
+    elements.create('payment').mount('#payment-element');
+    document.getElementById('checkout-btn').style.display = 'none';
+    document.getElementById('payment-form').style.display = 'block';
+  }
+</script>
+</body>
+</html>
