@@ -61,10 +61,16 @@ app.post('/api/create-order-payment', async (req, res) => {
   }
 });
 
-// Health check endpoint for ALB
+// Root Health check endpoint for ALB default target group pings
+app.get('/', (req, res) => {
+  res.status(200).send('Andre Grill API is running');
+});
+
+// Additional health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-const PORT = process.env.PORT || 5000;
+// Match port 3000 to align with ECS target group and port mapping
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
